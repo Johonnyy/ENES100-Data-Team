@@ -52,8 +52,8 @@ void turnToAngle(double targetAngle)
         
             //minTurnSpeed
             const float minTurnSpeed = 50;
-            Tank.setRightMotorPWM(output + constant);
-            Tank.setLeftMotorPWM(-1*output - constant);
+            Tank.setRightMotorPWM(output + minTurnSpeed);
+            Tank.setLeftMotorPWM(-1*output - minTurnSpeed);
         
         if(t > 250)
             {
