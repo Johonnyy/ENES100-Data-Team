@@ -1,77 +1,65 @@
 #include "Arduino.h"
+#include "Drive.h"
+#include "Ultrasonic.h"
 #include "Enes100.h"
-#include "Tank.h"
 
-void turnToAngle(double targetAngle);
 
-//Turning PID loop 
-float previous_error = 0;
-float integral = 0;
+VisionSystemClient Enes100;
 
+// Variables 
+bool isStartingA = false;
+
+// left motor #1, right motor #2
+Drive drive(1,2);
+// trigger port 2, echo port 3
+Ultrasonic ultrasonic(2,3);
+
+void determineStartingPoint();
+void moveToObjective();
+void movePastObstacles();
 
 void setup() {
-    Enes100.begin("Simulator", DATA, 97, 1116, 52, 50);
-    Tank.begin();
-    
-    Enes100.println("Starting driving");
-    turnToAngle(-PI/2);
-    Enes100.println("Success 1");
-    turnToAngle(PI/2);
-    Enes100.println("Success 2");
-       turnToAngle(3*-PI/4);
-    Enes100.println("Success 3");
-}
+    // INITIALIZATION DON'T ALTER!!
+    // Serial.begin(9600); //uncomment for serial over usb
+    Enes100.begin("Simulator", DATA, 275, 1116, 4, 5);
+    delay(2000); 
+    drive.begin();
 
+    drive.turnToHeading(PI/2);
+
+    // Mission
+    // determineStartingPoint();
+    // moveToObjective();
+}
 
 void loop() {
 }
 
-
-
-void turnToAngle(double targetAngle)
-{
-    double curAngle = Enes100.getTheta();
-    double error = atan2(sin(targetAngle-curAngle), cos(targetAngle-curAngle));
-
-    const float Kp = 200;
-    const float Ki = 0;
-    const float Kd = 10;
-    const float dt = 10;
-    float t = 0;
-
-    while(abs(curAngle-targetAngle)> 0.05) {
-
-        if(Enes100.isVisible())
-        {
-            integral = integral + error * (dt);
-            float derivative = (error - previous_error) / (dt);
-            float output = Kp * error + Ki * integral + Kd * derivative;
-            previous_error = error;
-            delay(dt);
-            t+= dt;
-        
-            //minTurnSpeed
-            const float minTurnSpeed = 50;
-            Tank.setRightMotorPWM(output + minTurnSpeed);
-            Tank.setLeftMotorPWM(-1*output - minTurnSpeed);
-        
-        if(t > 250)
-            {
-                Enes100.println("Errror " + (String)error);
-                Enes100.println("Output " + (String)output);
-                 Enes100.println("X " + (String)Enes100.getX());
-                Enes100.println("Y " + (String)Enes100.getTheta());
-                t=0;
-            }
-
-            curAngle = Enes100.getTheta();
-            error = atan2(sin(targetAngle-curAngle), cos(targetAngle-curAngle));
-
-        }
+void determineStartingPoint() {
+    while (!Enes100.isVisible())
+    {
+        delay(30);
     }
-    Tank.setRightMotorPWM(0);
-    Tank.setLeftMotorPWM(0);
-    previous_error = 0;
-    integral = 0;
+    float Ay = 1.5;
+    float By = 0.5;
+    float curY = Enes100.getY();
+    isStartingA = fabs(Ay - curY) < fabs(By - curY);
+    Enes100.println("Starting Point: " + isStartingA ? "A" : "B");
+}
+
+void moveToObjective() {
+    if(isStartingA)
+    {
+        Enes100.println("Moving to B");
+        drive.moveToPoint(0.25,0.5);
+    } else
+    {
+        Enes100.println("Moving to A");
+        drive.moveToPoint(0.25,1.5);
+    }
+}
+
+void movePastObstacles()
+{
 }
 
