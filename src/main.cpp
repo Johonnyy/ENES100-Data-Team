@@ -2,6 +2,7 @@
 #include "Drive.h"
 #include "Ultrasonic.h"
 #include "Enes100.h"
+#include "Photoresistor.h"
 
 
 VisionSystemClient Enes100;
@@ -13,6 +14,8 @@ bool isStartingA = false;
 Drive drive(1,2);
 // trigger port 2, echo port 3
 Ultrasonic ultrasonic(2,3);
+// photoresistor
+Photoresistor phototresistor();
 
 void determineStartingPoint();
 void moveToObjective();
@@ -28,8 +31,8 @@ void setup() {
     drive.turnToHeading(PI/2);
 
     // Mission
-    // determineStartingPoint();
-    // moveToObjective();
+    determineStartingPoint();
+    moveToObjective();
 }
 
 void loop() {
@@ -61,5 +64,6 @@ void moveToObjective() {
 
 void movePastObstacles()
 {
+
 }
 
