@@ -8,7 +8,7 @@
 class Drive {
 public:
 
-     Drive(int leftPort, int rightPort);
+    Drive(int leftPort, int rightPort);
 
     void turnToHeading(float heading);
     void moveToPoint(float xf, float yf);

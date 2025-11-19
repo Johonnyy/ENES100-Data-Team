@@ -2,7 +2,7 @@
 #include "Drive.h"
 #include "Ultrasonic.h"
 #include "Enes100.h"
-
+#include "ConeControl.h"
 
 VisionSystemClient Enes100;
 
@@ -13,6 +13,7 @@ bool isStartingA = false;
 Drive drive(1,2);
 // trigger port 2, echo port 3
 Ultrasonic ultrasonic(2,3);
+ConeControl cone(10);
 
 void determineStartingPoint();
 void moveToObjective();
@@ -20,15 +21,16 @@ void movePastObstacles();
 
 void setup() {
     // INITIALIZATION DON'T ALTER!!
-    // Serial.begin(9600); //uncomment for serial over usb
+    Serial.begin(9600); //uncomment for serial over usb
     Enes100.begin("Simulator", DATA, 275, 1116, 4, 5);
-    delay(2000); 
+    cone.attachPin(10);
+
     drive.begin();
 
-    drive.turnToHeading(PI/2);
+    //drive.turnToHeading(PI/2);
 
     // Mission
-    // determineStartingPoint();
+    determineStartingPoint();
     // moveToObjective();
 }
 
