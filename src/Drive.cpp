@@ -19,7 +19,6 @@ void Drive::begin() {
 
 void Drive::setLeft(float PWM) {
     PWM = constrain(PWM, -255,255);
-    left->setSpeed(PWM);
     if(PWM > 0 )
     {
         left->run(FORWARD);
@@ -27,11 +26,11 @@ void Drive::setLeft(float PWM) {
     {
         left->run(BACKWARD);
     }
+    left->setSpeed(abs(PWM));
 }
 
 void Drive::setRight(float PWM) {
     PWM = constrain(PWM, -255,255);
-    right->setSpeed(PWM);
     if(PWM > 0 )
     {
         right->run(FORWARD);
@@ -39,6 +38,7 @@ void Drive::setRight(float PWM) {
     {
         right->run(BACKWARD);
     }
+     right->setSpeed(abs(PWM));
 }
 
 float Drive::getHeading() {
@@ -56,10 +56,10 @@ void Drive::stop() {
 
 void Drive::turnToHeading(float heading)
 {
-    const float Kp = 10.0;
+    const float Kp = 160;
     const float tol = 0.03;
     const int dt = 20.0;
-    const float minPWM = 0.0;
+    const float minPWM = 50.0;
 
     float error = getMinAngle(getHeading(), heading);
   
@@ -76,6 +76,7 @@ void Drive::turnToHeading(float heading)
 
             setLeft(-output);
             setRight(output);
+            Enes100.println("PWM: " +String(output));
         }
          delay(dt);
     }
@@ -86,7 +87,7 @@ void Drive::turnToHeading(float heading)
 void Drive::moveToPoint(float xf, float yf)
 {
     const float Kp_linear = 100.0;
-    const float Kp_angular = 160.0;
+    const float Kp_angular = 100.0;
     const float minPWM = 50.0;   
     const float tol = 0.05;
     const float dt = 20.0;
@@ -107,8 +108,10 @@ void Drive::moveToPoint(float xf, float yf)
 
             float angularError = getMinAngle(Enes100.getTheta(), atan2f(dy,dx));
 
-            float linearOutput = constrain(error * Kp_linear,-200,200);
+            float linearOutput = constrain(error * Kp_linear,-255,255);
             float angularOutput = constrain(angularError * Kp_angular,-100,100);
+
+            if(linearOutput < minPWM) linearOutput = minPWM;
         
 
             setLeft(constrain(linearOutput - angularOutput,-255,255));
