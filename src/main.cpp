@@ -32,6 +32,7 @@ void setup() {
     // Mission
     determineStartingPoint();
     // moveToObjective();
+    movePastObstacles();
 }
 
 void loop() {
@@ -63,5 +64,52 @@ void moveToObjective() {
 
 void movePastObstacles()
 {
+    int xpos = Enes100.getX();
+    int ypos = Enes100.getY();
+    int row = 0;
+    int start = 0;
+    float possib[3] = {0.5,1,1.5};
+    if(getClosestY() == 0){
+        drive.moveToPoint(1.2,0.5);
+    }else if(getClosestY() == 1){
+        drive.moveToPoint(1.2,1);
+    }else{
+        drive.moveToPoint(1.2,1.5);
+    }
+    
+    xpos = Enes100.getX();
+    ypos = Enes100.getY();
+    drive.turnToHeading(0);
+    while(true){
+        if(ultrasonic.isObstacle(10)){
+            drive.moveToPoint(1.2, possib[(getClosestY() + 1)%3]);
+            drive.turnToHeading(0);
+        }else{
+            drive.moveToPoint(2,Enes100.getY());
+            break;
+        }
+    }
+    
+    float possib[3] = {0.5,1,1.5};
+    while(true){
+        if(ultrasonic.isObstacle(10)){
+            possib[getClosestY()] = -1;
+            drive.moveToPoint(2, possib[(getClosestY() + 1)%3]);
+            drive.turnToHeading(0);
+        }else{
+            drive.moveToPoint(3,Enes100.getY());\
+            break;
+        }
+    }
 }
 
+int getClosestY(){
+    int ypos = Enes100.getY();
+    if(ypos > 1.25 && ypos < 2){
+        return 2;
+    }else if(ypos <=1.25 && ypos >= 0.75){
+        return 1;
+    }else{
+        return 0;
+    }
+}

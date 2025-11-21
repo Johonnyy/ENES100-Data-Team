@@ -52,6 +52,7 @@ float Ultrasonic::getMedianDistance(int n)
         return readings[n/2];
 }
 
+/* triggerDist: cm */
 bool Ultrasonic::isObstacle(float triggerDist)
 {
     return getMedianDistance(5) <= triggerDist;
