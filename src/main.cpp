@@ -21,21 +21,21 @@ ConeControl cone(10);
 void determineStartingPoint();
 void moveToObjective();
 void movePastObstacles();
+int getClosestY();
 
 void setup() {
     // INITIALIZATION DON'T ALTER!!
     Serial.begin(9600); //uncomment for serial over usb
     pinMode(digitalIn, INPUT);
-    Enes100.begin("Simulator", DATA, 275, 1116, 4, 5);
+    Enes100.begin("Simulator", DATA, 15, 1116, 4, 5);
     cone.attachPin(10);
-
     drive.begin();
 
     //drive.turnToHeading(PI/2);
 
     // Mission
-    determineStartingPoint();
-    moveToObjective();
+    // determineStartingPoint();
+    // moveToObjective();
     movePastObstacles();
 }
 
@@ -107,47 +107,37 @@ void moveToObjective() {
 
 void movePastObstacles()
 {
-    int xpos = Enes100.getX();
-    int ypos = Enes100.getY();
-    int row = 0;
-    int start = 0;
+    const float xFirstRow = 0.9;
     float possib[3] = {0.5,1,1.5};
-    if(getClosestY() == 0){
-        drive.moveToPoint(1.2,0.5);
-    }else if(getClosestY() == 1){
-        drive.moveToPoint(1.2,1);
-    }else{
-        drive.moveToPoint(1.2,1.5);
-    }
+    drive.moveToPoint(xFirstRow,possib[getClosestY()]);
     
-    xpos = Enes100.getX();
-    ypos = Enes100.getY();
+    float xpos = Enes100.getX();
+    float ypos = Enes100.getY();
+    const float xSecondRow = 1.8;
     drive.turnToHeading(0);
     while(true){
-        if(ultrasonic.isObstacle(10)){
-            drive.moveToPoint(1.2, possib[(getClosestY() + 1)%3]);
+        if(ultrasonic.isObstacle(15)){
+            drive.moveToPoint(xFirstRow, possib[(getClosestY() + 1)%3]);
             drive.turnToHeading(0);
         }else{
-            drive.moveToPoint(2,Enes100.getY());
+            drive.moveToPoint(xSecondRow,Enes100.getY());
             break;
         }
     }
-    
-    float possib[3] = {0.5,1,1.5};
+
     while(true){
-        if(ultrasonic.isObstacle(10)){
-            possib[getClosestY()] = -1;
-            drive.moveToPoint(2, possib[(getClosestY() + 1)%3]);
+        if(ultrasonic.isObstacle(15)){
+            drive.moveToPoint(xSecondRow, possib[(getClosestY() + 1)%3]);
             drive.turnToHeading(0);
         }else{
-            drive.moveToPoint(3,Enes100.getY());\
+            drive.moveToPoint(3,Enes100.getY());
             break;
         }
     }
 }
 
 int getClosestY(){
-    int ypos = Enes100.getY();
+    float ypos = Enes100.getY();
     if(ypos > 1.25 && ypos < 2){
         return 2;
     }else if(ypos <=1.25 && ypos >= 0.75){
