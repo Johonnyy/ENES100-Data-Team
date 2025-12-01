@@ -59,7 +59,7 @@ void Drive::turnToHeading(float heading)
     const float Kp = 160;
     const float tol = 0.03;
     const int dt = 20.0;
-    const float minPWM = 50.0;
+    const float minPWM = 35.0;
 
     float error = getMinAngle(getHeading(), heading);
   
@@ -76,7 +76,6 @@ void Drive::turnToHeading(float heading)
 
             setLeft(-output);
             setRight(output);
-            Enes100.println("PWM: " +String(output));
         }
          delay(dt);
     }
@@ -86,7 +85,7 @@ void Drive::turnToHeading(float heading)
 
 void Drive::moveToPoint(float xf, float yf)
 {
-    const float Kp_linear = 100.0;
+    const float Kp_linear = 400.0;
     const float Kp_angular = 100.0;
     const float minPWM = 50.0;   
     const float tol = 0.05;

@@ -14,28 +14,24 @@ int digitalIn = -1;
 
 // left motor #1, right motor #2
 Drive drive(1,2);
-// trigger port 2, echo port 3
 Ultrasonic ultrasonic(2,3);
 ConeControl cone(10);
 
 void determineStartingPoint();
 void moveToObjective();
 void movePastObstacles();
-int getClosestY();
+float getClosestY();
 
 void setup() {
     // INITIALIZATION DON'T ALTER!!
-    Serial.begin(9600); //uncomment for serial over usb
     pinMode(digitalIn, INPUT);
-    Enes100.begin("Simulator", DATA, 15, 1116, 4, 5);
     cone.attachPin(10);
+    Enes100.begin("Mikerodata", DATA, 15, 1116, 4, 5);
     drive.begin();
-
-    //drive.turnToHeading(PI/2);
 
     // Mission
     // determineStartingPoint();
-    // moveToObjective();
+    moveToObjective();
     movePastObstacles();
 }
 
@@ -107,42 +103,117 @@ void moveToObjective() {
 
 void movePastObstacles()
 {
-    const float xFirstRow = 0.9;
-    float possib[3] = {0.5,1,1.5};
-    drive.moveToPoint(xFirstRow,possib[getClosestY()]);
-    
-    float xpos = Enes100.getX();
-    float ypos = Enes100.getY();
-    const float xSecondRow = 1.8;
-    drive.turnToHeading(0);
-    while(true){
-        if(ultrasonic.isObstacle(15)){
-            drive.moveToPoint(xFirstRow, possib[(getClosestY() + 1)%3]);
-            drive.turnToHeading(0);
-        }else{
-            drive.moveToPoint(xSecondRow,Enes100.getY());
-            break;
+    const int objectThreshhold = 25;
+
+    //If started at bottom go upward, if at top go downward
+    int direction = getClosestY() == 0.5 ? 1 : -1;
+    for(int i = 0; i <= 2; i++)
+    {
+        // move backward and up/down if obstacle detected
+        if(i != 0)
+        {
+            Enes100.println("up or down!");
+            drive.moveToPoint(Enes100.getX(), Enes100.getY() + 0.5 * direction);      
         }
+        Enes100.println("moving to testing point");
+        drive.moveToPoint(0.8, getClosestY());
+        Enes100.println("aligning");
+        drive.turnToHeading(0);
+        if(!ultrasonic.isObstacle(objectThreshhold))
+        {
+            Enes100.println("Distance: " + String(ultrasonic.getMedianDistance(5)) + " cm");
+            Enes100.println("No object");
+                break; //Exits for loop
+        }
+        Enes100.println("Object detected!");
+        Enes100.println("LOOP");
+    }
+     
+    //Move to second row 
+    drive.moveToPoint(1.75, getClosestY());
+
+    float closestY = getClosestY();
+    bool startedMiddle = closestY == 1;
+    direction = (closestY == 0.5 || startedMiddle) ? 1 : -1;
+    for(int i = 0; i <= 2; i++)
+    {
+        // move backward and up/down if obstacle detected
+        if(i != 0)
+        {
+            Enes100.println("up or down!");
+            if(startedMiddle && i == 2)
+            {
+                //Now middle and top are blocked go through bottom
+                   drive.moveToPoint(Enes100.getX(), Enes100.getY() - 1);     
+            } else
+            {
+                   drive.moveToPoint(Enes100.getX(), Enes100.getY() + 0.5 * direction);     
+            }       
+        }
+        Enes100.println("moving to testing point");
+        drive.moveToPoint(1.75, getClosestY());
+        Enes100.println("aligning");
+        drive.turnToHeading(0);
+        if(!ultrasonic.isObstacle(objectThreshhold))
+        {
+            Enes100.println("Distance: " + String(ultrasonic.getMedianDistance(5)) + " cm");
+            Enes100.println("No object");
+                break; //Exits for loop
+        }
+        Enes100.println("Object detected!");
+        Enes100.println("LOOP");
     }
 
-    while(true){
-        if(ultrasonic.isObstacle(15)){
-            drive.moveToPoint(xSecondRow, possib[(getClosestY() + 1)%3]);
-            drive.turnToHeading(0);
-        }else{
-            drive.moveToPoint(3,Enes100.getY());
-            break;
-        }
+    //Move past obstacle
+    drive.moveToPoint(2.8,Enes100.getY());
+    //Move before bridge
+    drive.moveToPoint(3.3, 1.5);
+    //Move under bridge
+    drive.turnToHeading(0);
+    cone.rotateToAngle(30);
+    drive.setLeft(255);
+    drive.setRight(255);
+    delay(3000);
+    drive.stop();
+    delay(100);
+
+    //DANCE WE WON!
+    int left = 255;
+    int right = -255;
+    while(true)
+    {
+     
+        drive.setLeft(left);
+        drive.setRight(right);
+        delay(1000);
+        left = -left;
+        right = -right;
     }
+    
 }
 
-int getClosestY(){
+
+
+float getClosestY(){
+    while(!Enes100.isVisible())
+    {
+        delay(30);
+    }
     float ypos = Enes100.getY();
-    if(ypos > 1.25 && ypos < 2){
-        return 2;
-    }else if(ypos <=1.25 && ypos >= 0.75){
-        return 1;
-    }else{
-        return 0;
+    float dyBottom = abs(ypos - 0.5);
+    float dyMiddle = abs(ypos - 1);
+    float dyTop = abs(ypos - 1.5);
+
+      // bottom is closest
+    if (dyBottom <= dyMiddle && dyBottom <= dyTop) {
+        return 0.35;
+    }
+    // middle is closest
+    else if (dyMiddle <= dyBottom && dyMiddle <= dyTop) {
+        return 1.0;
+    }
+    // top is closest
+    else {
+        return 1.7;
     }
 }
