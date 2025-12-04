@@ -5,9 +5,8 @@ Photoresistor::Photoresistor()
 {
 }
 
-bool isMagnetic()
+bool Photoresistor::isMagnetic()
 {
-    //UPDATE ANALOG PIN
     int value = analogRead(A0);
     return value < 450;
 }

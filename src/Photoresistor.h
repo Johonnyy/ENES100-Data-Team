@@ -3,10 +3,8 @@
 
 class Photoresistor {
 public:
-
     Photoresistor();
     bool isMagnetic();
-    
 };
 
 #endif

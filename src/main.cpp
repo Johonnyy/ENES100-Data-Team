@@ -3,6 +3,8 @@
 #include "Ultrasonic.h"
 #include "Enes100.h"
 #include "ConeControl.h"
+#include "Photoresistor.h"
+
 
 VisionSystemClient Enes100;
 
@@ -10,29 +12,37 @@ VisionSystemClient Enes100;
 bool isStartingA = false;
 
 //Change for wire to detect signal
-int digitalIn = -1;
+int digitalIn = 8;
 
 // left motor #1, right motor #2
+Photoresistor photoresistor;
 Drive drive(1,2);
 Ultrasonic ultrasonic(2,3);
 ConeControl cone(10);
 
+
 void determineStartingPoint();
 void moveToObjective();
 void movePastObstacles();
+void startObjective();
+void dutyCycle();
 float getClosestY();
 
 void setup() {
     // INITIALIZATION DON'T ALTER!!
+    delay(2000);
     pinMode(digitalIn, INPUT);
     cone.attachPin(10);
     Enes100.begin("Mikerodata", DATA, 15, 1116, 4, 5);
     drive.begin();
 
+    dutyCycle();
+
     // Mission
     // determineStartingPoint();
-    moveToObjective();
-    movePastObstacles();
+    // moveToObjective();
+    // delay(1000);
+    // movePastObstacles();
 }
 
 void loop() {
@@ -62,44 +72,59 @@ void moveToObjective() {
     }
 }
 
-// void startObjective() {
-//     // USE THESE
-//     // Enes100.mission(CYCLE, i); i is the duty cycle percent (ex. 10, 30, 50, 70, 90)
-//     // Enes100.mission(MAGNETISM, MAGNETIC);
-//     // Enes100.mission(MAGNETISM, NOT_MAGNETIC);
+void startObjective() {
+    // USE THESE
+    // Enes100.mission(CYCLE, i); i is the duty cycle percent (ex. 10, 30, 50, 70, 90)
+    // Enes100.mission(MAGNETISM, MAGNETIC);
+    // Enes100.mission(MAGNETISM, NOT_MAGNETIC);
 
-//     //Lower Servo still above magnnet
-//     //Raise back and if it has light its non magnetic
-//     bool magnetic = photoresistor.isMagnetic();
-//     if(magnetic) 
-//     {
-//         Enes100.mission(MAGNETISM, MAGNETIC);
-//     } else
-//     {
-//         Enes100.mission(MAGNETISM, NOT_MAGNETIC);
-//     }
+    //Lower Servo still above magnnet
+    //Raise back and if it has light its non magnetic
+    // bool magnetic = photoresistor.isMagnetic();
+    // if(magnetic) 
+    // {
+    //     Enes100.mission(MAGNETISM, MAGNETIC);
+    // } else
+    // {
+    //     Enes100.mission(MAGNETISM, NOT_MAGNETIC);
+    // }
 
-//     //Go back down fully to pickup puck
-    
-//     //Report signal wave
-//     float totalDuty = 0;
+    //Goes fully down and reports cycle
+    dutyCycle();
+}
 
-//     for (int i = 0; i < 5; i++)
-//     {
-//         unsigned long highTime = pulseIn(digitalIn, HIGH);
-//         unsigned long lowTime  = pulseIn(digitalIn, LOW);
 
-//         if (highTime > 0 && lowTime > 0) {
-//             float duty = (float)highTime / (highTime + lowTime);
-//             totalDuty += duty;
-//     }
+void dutyCycle()
+{
+    const float minConeAngle = 30;
+    const float maxConeAngle = 150;
 
-//     delay(20);
-//     }
+    // Lower Cone
+    cone.rotateToAngle(minConeAngle);
+    // Wait for contact
+    delay(2000);
 
-//     float dutyCycle = totalDuty / 5.0;
-//     Enes100.mission(CYCLE, dutyCycle);
-// }
+    float totalDuty = 0;
+
+    for (int i = 0; i < 5; i++)
+    {
+        unsigned long highTime = pulseIn(digitalIn, HIGH);
+        unsigned long lowTime  = pulseIn(digitalIn, LOW);
+
+        if (highTime > 0 && lowTime > 0) {
+            float duty = (float)highTime / (highTime + lowTime);
+            totalDuty += duty;
+    }
+
+    delay(20);
+    }
+
+    float dutyCycle = totalDuty / 5.0;
+    Enes100.println("Duty Cycle: " + String(dutyCycle));
+    Enes100.mission(CYCLE, dutyCycle);
+
+    cone.rotateToAngle(maxConeAngle);
+}
 
 void movePastObstacles()
 {
