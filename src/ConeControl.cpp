@@ -31,3 +31,18 @@ void ConeControl::enable() {
 void ConeControl::disable() {
     servoMotor.detach();
 }
+
+void ConeControl::moveServoSmooth(int startAngle, int endAngle, int stepDelayMs) {
+  if(startAngle < endAngle){
+    for(int pos = startAngle; pos <= endAngle; pos++){
+      servoMotor.write(pos);
+      delay(stepDelayMs);
+    }
+  } else {
+    for(int pos = startAngle; pos >= endAngle; pos--){
+      servoMotor.write(pos);
+      delay(stepDelayMs);
+    }
+  }
+}
+

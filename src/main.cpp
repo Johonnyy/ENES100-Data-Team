@@ -32,25 +32,33 @@ void setup() {
     Serial.begin(9600);
     pinMode(digitalIn, INPUT);
     cone.enable();
-    // Enes100.begin("Mikerodata", DATA, 15, 1116, 4, 5);
-    // drive.begin();
+    Enes100.begin("Mikerodata", DATA, 15, 1120, 4, 5);
+    drive.begin();
 
 
     // Mission
+    cone.moveServoSmooth(0, 150, 20); // Raise cone
     moveToObjective();    
-    reportMagnetism();
     reportDutyCycle();
+    reportMagnetism();
     delay(1000);
     movePastObstacles();
     moveUnderBar();
+    
     // dance();
 }
 
-void loop() {
+void loop() 
+{
+
 }
 
 // Functions
 void moveToObjective() {
+    Enes100.println("Moving to objective");
+    Enes100.println(String(Enes100.getY()));
+    // TODO: change move to point values to get a better approach on objective
+    // TODO: fix movement when y > 1 (OTV starts on left side when facing the general arena direction)
     if(Enes100.getY() < 1)
     {
         drive.moveToPoint(0.25,1);
@@ -60,15 +68,23 @@ void moveToObjective() {
         drive.moveToPoint(0.25,1);
         drive.moveToPoint(0.25,0.5);
     }
+    drive.setLeft(15);
+    drive.setRight(15);
+    delay(10);
+    drive.setLeft(0);
+    drive.setRight(0);
 }
 
 void reportMagnetism()
 {
-    cone.rotateHover();
+    Enes100.println("line 5");
+    Enes100.println("photores value1: " + String(photoresistor.getValue()));
+    cone.moveServoSmooth(150, 0, 20);
     delay(2000);
-    cone.rotateMax();
+    cone.moveServoSmooth(0, 150, 20);
     delay(2000);
     bool magnetic = photoresistor.isMagnetic();
+    Enes100.println("photores value2: " + String(photoresistor.getValue()));
     if(magnetic) 
     {
         Enes100.mission(MAGNETISM, MAGNETIC);
@@ -81,12 +97,12 @@ void reportMagnetism()
 void reportDutyCycle()
 {
 
-    // Lower Con
+    // Lower Cone
     cone.rotateMin();
     // Wait for contact
     delay(2000);
-    drive.setLeft(-255);
-    drive.setRight(-255);
+    drive.setLeft(-50);
+    drive.setRight(-50);
     delay(500);
 
 
@@ -96,11 +112,7 @@ void reportDutyCycle()
     {
        
         unsigned long highTime = pulseIn(digitalIn, HIGH);
-        unsigned long lowTime  = pulseIn(digitalIn, LOW);
-        
-        Serial.println("High " + String(highTime));
-        Serial.println("Low " + String(lowTime)); 
-
+        unsigned long lowTime  = pulseIn(digitalIn, LOW); 
         if (highTime > 0 && lowTime > 0) {
             float duty = (float)highTime / (highTime + lowTime);
             totalDuty += duty;
@@ -116,7 +128,7 @@ void reportDutyCycle()
     Enes100.println("Duty Cycle: " + String(rounded));
     Enes100.mission(CYCLE, rounded);
     drive.stop();
-    cone.rotateMax();
+    cone.moveServoSmooth(0, 150, 20);
 }
 
 
@@ -185,6 +197,7 @@ void moveUnderBar()
 {
     //Move past obstacle
     drive.moveToPoint(2.8,Enes100.getY());
+    cone.moveServoSmooth(150, 0, 20);
     //Move before bridge
     drive.moveToPoint(3.3, 1.5);
     //Move under bridge

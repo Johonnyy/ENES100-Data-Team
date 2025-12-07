@@ -5,6 +5,7 @@ class Photoresistor {
 public:
     Photoresistor();
     bool isMagnetic();
+    int getValue();
 };
 
 #endif

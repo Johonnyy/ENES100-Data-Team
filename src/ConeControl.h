@@ -7,6 +7,7 @@ class ConeControl {
 public:
     ConeControl(int pin);  
     void rotateToAngle(int targetAngle);
+    void moveServoSmooth(int startAngle, int endAngle, int stepDelayMs);
     void rotateMax();
     void rotateMin();
     void rotateHover();
