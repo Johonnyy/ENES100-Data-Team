@@ -4,112 +4,102 @@
 #include "Enes100.h"
 #include "ConeControl.h"
 #include "Photoresistor.h"
+#include "Obstacle.h"
 
 
+
+// Variables
+int digitalIn = 8; // duty cycle detection
+
+// Objects
 VisionSystemClient Enes100;
-
-// Variables 
-bool isStartingA = false;
-
-//Change for wire to detect signal
-int digitalIn = 8;
-
-// left motor #1, right motor #2
 Photoresistor photoresistor;
 Drive drive(1,2);
 Ultrasonic ultrasonic(2,3);
-ConeControl cone(10);
+ConeControl cone(6);
 
-
-void determineStartingPoint();
+// Define functions
 void moveToObjective();
 void movePastObstacles();
 void startObjective();
-void dutyCycle();
-float getClosestY();
+void reportMagnetism();
+void reportDutyCycle();
+void movePastRow(Obstacle obstacles[]);
+void moveUnderBar();  
+void dance();
 
 void setup() {
-    // INITIALIZATION DON'T ALTER!!
-    delay(2000);
+    Serial.begin(9600);
     pinMode(digitalIn, INPUT);
-    cone.attachPin(10);
-    Enes100.begin("Mikerodata", DATA, 15, 1116, 4, 5);
-    drive.begin();
+    cone.enable();
+    // Enes100.begin("Mikerodata", DATA, 15, 1116, 4, 5);
+    // drive.begin();
 
-    dutyCycle();
 
     // Mission
-    // determineStartingPoint();
-    // moveToObjective();
-    // delay(1000);
-    // movePastObstacles();
+    moveToObjective();    
+    reportMagnetism();
+    reportDutyCycle();
+    delay(1000);
+    movePastObstacles();
+    moveUnderBar();
+    // dance();
 }
 
 void loop() {
 }
 
-void determineStartingPoint() {
-    while (!Enes100.isVisible())
-    {
-        delay(30);
-    }
-    float Ay = 1.5;
-    float By = 0.5;
-    float curY = Enes100.getY();
-    isStartingA = fabs(Ay - curY) < fabs(By - curY);
-    Enes100.println("Starting Point: " + isStartingA ? "A" : "B");
-}
-
+// Functions
 void moveToObjective() {
-    if(isStartingA)
+    if(Enes100.getY() < 1)
     {
-        Enes100.println("Moving to B");
-        drive.moveToPoint(0.25,0.5);
+        drive.moveToPoint(0.25,1);
+        drive.moveToPoint(0.25,1.35);
     } else
     {
-        Enes100.println("Moving to A");
-        drive.moveToPoint(0.25,1.5);
+        drive.moveToPoint(0.25,1);
+        drive.moveToPoint(0.25,0.5);
     }
 }
 
-void startObjective() {
-    // USE THESE
-    // Enes100.mission(CYCLE, i); i is the duty cycle percent (ex. 10, 30, 50, 70, 90)
-    // Enes100.mission(MAGNETISM, MAGNETIC);
-    // Enes100.mission(MAGNETISM, NOT_MAGNETIC);
-
-    //Lower Servo still above magnnet
-    //Raise back and if it has light its non magnetic
-    // bool magnetic = photoresistor.isMagnetic();
-    // if(magnetic) 
-    // {
-    //     Enes100.mission(MAGNETISM, MAGNETIC);
-    // } else
-    // {
-    //     Enes100.mission(MAGNETISM, NOT_MAGNETIC);
-    // }
-
-    //Goes fully down and reports cycle
-    dutyCycle();
+void reportMagnetism()
+{
+    cone.rotateHover();
+    delay(2000);
+    cone.rotateMax();
+    delay(2000);
+    bool magnetic = photoresistor.isMagnetic();
+    if(magnetic) 
+    {
+        Enes100.mission(MAGNETISM, MAGNETIC);
+    } else
+    {
+        Enes100.mission(MAGNETISM, NOT_MAGNETIC);
+    }
 }
 
-
-void dutyCycle()
+void reportDutyCycle()
 {
-    const float minConeAngle = 30;
-    const float maxConeAngle = 150;
 
-    // Lower Cone
-    cone.rotateToAngle(minConeAngle);
+    // Lower Con
+    cone.rotateMin();
     // Wait for contact
     delay(2000);
+    drive.setLeft(-255);
+    drive.setRight(-255);
+    delay(500);
+
 
     float totalDuty = 0;
 
     for (int i = 0; i < 5; i++)
     {
+       
         unsigned long highTime = pulseIn(digitalIn, HIGH);
         unsigned long lowTime  = pulseIn(digitalIn, LOW);
+        
+        Serial.println("High " + String(highTime));
+        Serial.println("Low " + String(lowTime)); 
 
         if (highTime > 0 && lowTime > 0) {
             float duty = (float)highTime / (highTime + lowTime);
@@ -120,89 +110,95 @@ void dutyCycle()
     }
 
     float dutyCycle = totalDuty / 5.0;
-    Enes100.println("Duty Cycle: " + String(dutyCycle));
-    Enes100.mission(CYCLE, dutyCycle);
+    float dutyPercent = dutyCycle * 100.0f;
+    float rounded = round(dutyPercent / 10.0f) * 10.0f;
 
-    cone.rotateToAngle(maxConeAngle);
+    Enes100.println("Duty Cycle: " + String(rounded));
+    Enes100.mission(CYCLE, rounded);
+    drive.stop();
+    cone.rotateMax();
+}
+
+
+
+void movePastRow(Obstacle obstacles[])
+{
+    const int objectThreshhold = 25; //cm
+
+    for (int i = 0; i <= 2; i++)
+    {
+        Obstacle* closestObstacle = nullptr;
+        float closestDistance = 100;
+        for(int j = 0; j <= 2; j++)
+        {
+            Obstacle& obstacle = obstacles[j];
+            if(!obstacle.isChecked())
+            {
+                while(!Enes100.isVisible())
+                {
+                    delay(30);
+                }
+                float dx = obstacle.getX() - Enes100.getX();
+                float dy = obstacle.getY() - Enes100.getY();
+                float distance = sqrt(dx*dx + dy*dy);
+                if(distance < closestDistance)
+                {
+                    closestDistance = distance;
+                    closestObstacle = &obstacle;
+                }
+            }
+        }
+        if (closestObstacle == nullptr)
+        break;
+
+        drive.moveToPoint(closestObstacle->getX(),closestObstacle->getY());
+        drive.turnToHeading(0);
+        if(!ultrasonic.isObstacle(objectThreshhold)) break;
+        closestObstacle -> check();
+    }
 }
 
 void movePastObstacles()
 {
-    const int objectThreshhold = 25;
+    drive.setLeft(-255);
+    drive.setRight(-255);
+    delay(1500);
 
-    //If started at bottom go upward, if at top go downward
-    int direction = getClosestY() == 0.5 ? 1 : -1;
-    for(int i = 0; i <= 2; i++)
-    {
-        // move backward and up/down if obstacle detected
-        if(i != 0)
-        {
-            Enes100.println("up or down!");
-            drive.moveToPoint(Enes100.getX(), Enes100.getY() + 0.5 * direction);      
-        }
-        Enes100.println("moving to testing point");
-        drive.moveToPoint(0.8, getClosestY());
-        Enes100.println("aligning");
-        drive.turnToHeading(0);
-        if(!ultrasonic.isObstacle(objectThreshhold))
-        {
-            Enes100.println("Distance: " + String(ultrasonic.getMedianDistance(5)) + " cm");
-            Enes100.println("No object");
-                break; //Exits for loop
-        }
-        Enes100.println("Object detected!");
-        Enes100.println("LOOP");
-    }
-     
-    //Move to second row 
-    drive.moveToPoint(1.75, getClosestY());
+    Enes100.println("moving past");
+    Obstacle firstRow[3] = {
+    Obstacle(0.8f, 0.35f),
+    Obstacle(0.8f, 1.0f),
+    Obstacle(0.8f, 1.7f)
+    };
 
-    float closestY = getClosestY();
-    bool startedMiddle = closestY == 1;
-    direction = (closestY == 0.5 || startedMiddle) ? 1 : -1;
-    for(int i = 0; i <= 2; i++)
-    {
-        // move backward and up/down if obstacle detected
-        if(i != 0)
-        {
-            Enes100.println("up or down!");
-            if(startedMiddle && i == 2)
-            {
-                //Now middle and top are blocked go through bottom
-                   drive.moveToPoint(Enes100.getX(), Enes100.getY() - 1);     
-            } else
-            {
-                   drive.moveToPoint(Enes100.getX(), Enes100.getY() + 0.5 * direction);     
-            }       
-        }
-        Enes100.println("moving to testing point");
-        drive.moveToPoint(1.75, getClosestY());
-        Enes100.println("aligning");
-        drive.turnToHeading(0);
-        if(!ultrasonic.isObstacle(objectThreshhold))
-        {
-            Enes100.println("Distance: " + String(ultrasonic.getMedianDistance(5)) + " cm");
-            Enes100.println("No object");
-                break; //Exits for loop
-        }
-        Enes100.println("Object detected!");
-        Enes100.println("LOOP");
-    }
+     Obstacle secondRow[3] = {
+    Obstacle(1.75f, 0.35f),
+    Obstacle(1.75f, 1.0f),
+    Obstacle(1.75f, 1.7f)
+    };
 
+    movePastRow(firstRow);
+    movePastRow(secondRow);    
+}
+
+void moveUnderBar()
+{
     //Move past obstacle
     drive.moveToPoint(2.8,Enes100.getY());
     //Move before bridge
     drive.moveToPoint(3.3, 1.5);
     //Move under bridge
     drive.turnToHeading(0);
-    cone.rotateToAngle(30);
+    cone.rotateMin();
     drive.setLeft(255);
     drive.setRight(255);
     delay(3000);
     drive.stop();
     delay(100);
+}
 
-    //DANCE WE WON!
+void dance()
+{
     int left = 255;
     int right = -255;
     while(true)
@@ -213,32 +209,5 @@ void movePastObstacles()
         delay(1000);
         left = -left;
         right = -right;
-    }
-    
-}
-
-
-
-float getClosestY(){
-    while(!Enes100.isVisible())
-    {
-        delay(30);
-    }
-    float ypos = Enes100.getY();
-    float dyBottom = abs(ypos - 0.5);
-    float dyMiddle = abs(ypos - 1);
-    float dyTop = abs(ypos - 1.5);
-
-      // bottom is closest
-    if (dyBottom <= dyMiddle && dyBottom <= dyTop) {
-        return 0.35;
-    }
-    // middle is closest
-    else if (dyMiddle <= dyBottom && dyMiddle <= dyTop) {
-        return 1.0;
-    }
-    // top is closest
-    else {
-        return 1.7;
     }
 }

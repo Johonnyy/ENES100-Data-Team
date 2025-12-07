@@ -91,6 +91,7 @@ void Drive::moveToPoint(float xf, float yf)
     const float tol = 0.05;
     const float dt = 20.0;
 
+
      float dx = xf - Enes100.getX();
      float dy = yf - Enes100.getY();
      float error = sqrt(dx*dx + dy*dy);
@@ -110,6 +111,19 @@ void Drive::moveToPoint(float xf, float yf)
             float linearOutput = constrain(error * Kp_linear,-255,255);
             float angularOutput = constrain(angularError * Kp_angular,-100,100);
 
+            // Angular filtering
+            float angularDeadband = 0.1;
+            if(error >= angularDeadband)
+            {
+                // Starts lowering angularOutput as distance is below angularSlowThreshold
+                float angularSlowThreshold = 0.2; //20cm
+                float distFactor = constrain(error / angularSlowThreshold, 0.0, 1.0);
+                angularOutput *= distFactor;
+            } else
+            {
+                angularOutput = 0;
+            }
+        
             if(linearOutput < minPWM) linearOutput = minPWM;
         
 

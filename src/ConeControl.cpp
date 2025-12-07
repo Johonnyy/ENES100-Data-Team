@@ -1,18 +1,33 @@
 #include "Arduino.h"
 #include "ConeControl.h"
-#include <Servo.h>
-Servo servoMotor;
-ConeControl::ConeControl(int placeholder){
+
+ConeControl::ConeControl(int pin) : servoPin(pin) {
 }
 
-void ConeControl::rotateToAngle(int targetAngle){
+void ConeControl::rotateToAngle(int targetAngle) {
     servoMotor.write(targetAngle);
 }
 
-double ConeControl::getAngle(){
+void ConeControl::rotateMax() {
+    rotateToAngle(150);
+}
+
+void ConeControl::rotateMin() {
+    rotateToAngle(0);
+}
+
+void ConeControl::rotateHover() {
+    rotateToAngle(30);
+}
+
+double ConeControl::getAngle() {
     return servoMotor.read();
 }
 
-void ConeControl::attachPin(int pin){
-    servoMotor.attach(pin);
+void ConeControl::enable() {
+    servoMotor.attach(servoPin);
+}
+
+void ConeControl::disable() {
+    servoMotor.detach();
 }
