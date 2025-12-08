@@ -32,7 +32,7 @@ void setup() {
     Serial.begin(9600);
     pinMode(digitalIn, INPUT);
     cone.enable();
-    Enes100.begin("Mikerodata", DATA, 15, 1120, 4, 5);
+    Enes100.begin("Mikerodata", DATA, 15, 1116, 4, 5);
     drive.begin();
 
 
